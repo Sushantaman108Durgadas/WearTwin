@@ -1,0 +1,852 @@
+**Files in the repository**
+
+wokwi-project.txt
+sketch.ino
+diagram.json
+project_req.txt
+libraries.txt
+
+KalmanFilter.h
+KalmanFilter.cpp
+
+InertialState.h
+InertialState.cpp
+
+CardialState.h
+CardialState.cpp
+
+ecgsim.chip.json
+ecgsim.chip.c
+
+
+============================================================
+VS CODE + WOKWI PROJECT BUILD & SETUP
+============================================================
+
+Project:
+Healthcare Wearable / Major Project
+
+============================================================
+1. PROJECT OVERVIEW
+============================================================
+
+Short description of the project.
+
+Overall architecture:
+
+                    MPU6050
+                       |
+                       v
+                  InertialState
+                       |
+                       v
+                  KalmanFilter
+
+
+Physical ECG switches
+        |
+        v
+    ECG Custom Chip
+        |
+        v
+      ECG_OUT
+        |
+        v
+     ESP32 ADC
+        |
+        v
+    CardialState
+        |
+        +------> R-Peak Detection
+        |
+        +------> RR Interval
+        |
+        +------> BPM
+
+
+============================================================
+2. DEVELOPMENT ENVIRONMENT
+============================================================
+
+VS Code
+Wokwi
+Arduino CLI
+ESP32 Arduino Core
+
+Board:
+ESP32 DevKit C V4
+
+FQBN:
+esp32:esp32:esp32
+
+
+============================================================
+3. PROJECT FILE STRUCTURE
+============================================================
+
+wokwi-project.txt
+sketch.ino
+diagram.json
+project_req.txt
+libraries.txt
+
+KalmanFilter.h
+KalmanFilter.cpp
+
+InertialState.h
+InertialState.cpp
+
+CardialState.h
+CardialState.cpp
+
+ecgsim.chip.json
+ecgsim.chip.c
+
+
+============================================================
+4. wokwi-project.txt
+============================================================
+
+Purpose of this file.
+
+How it is used in the project.
+
+What information it contains.
+
+============================================================
+5. sketch.ino
+============================================================
+
+Purpose:
+Main ESP32 application.
+
+Responsibilities:
+
+- Initialize Serial
+- Initialize I2C
+- Initialize InertialState
+- Initialize CardialState
+- Continuously update both subsystems
+- Print processed values
+
+Important object:
+
+InertialState inertial;
+
+CardialState cardiac(34);
+
+
+GPIO assignments:
+
+MPU6050:
+SDA -> GPIO21
+SCL -> GPIO22
+
+ECG:
+ECG_OUT -> GPIO34
+
+
+Main execution flow:
+
+setup()
+    |
+    +-- Serial.begin()
+    |
+    +-- Wire.begin()
+    |
+    +-- inertial.begin()
+    |
+    +-- cardiac.begin()
+
+
+loop()
+    |
+    +-- cardiac.update()
+    |
+    +-- inertial.update()
+    |
+    +-- print results
+
+
+============================================================
+6. diagram.json
+============================================================
+
+Purpose:
+Defines the complete Wokwi hardware circuit.
+
+Components:
+
+- ESP32 DevKit C V4
+- MPU6050
+- ECG custom chip
+- Three slide switches
+- VCC/GND
+- Resistors
+
+
+Connections:
+
+ESP32 GPIO21 -> MPU6050 SDA
+ESP32 GPIO22 -> MPU6050 SCL
+
+ECG_OUT -> ESP32 GPIO34
+
+Physical switches -> ECG chip MODE0/MODE1/MODE2
+
+
+Important architecture:
+
+The ESP32 does NOT control ECG mode.
+
+The physical switches directly control the ECG custom chip.
+
+
+============================================================
+7. ecgsim.chip.json
+============================================================
+
+Purpose:
+Defines the interface/configuration of the Wokwi custom ECG chip.
+
+The chip exposes:
+
+VCC
+GND
+ECG_OUT
+MODE0
+MODE1
+MODE2
+
+The JSON file describes the custom chip pins and
+Wokwi custom-chip configuration.
+
+
+============================================================
+8. ecgsim.chip.c
+============================================================
+
+Purpose:
+Implements the ECG simulator itself.
+
+Responsibilities:
+
+- Read MODE0/MODE1/MODE2
+- Select simulated heart rate
+- Generate ECG waveform
+- Output ECG waveform through ECG_OUT
+
+
+Heart-rate modes:
+
+MODE0 -> 55 BPM
+MODE1 -> 75 BPM
+MODE2 -> 110 BPM
+
+
+get_bpm():
+
+Reads the mode pins using pin_read().
+
+MODE0 HIGH:
+55 BPM
+
+MODE1 HIGH:
+75 BPM
+
+MODE2 HIGH:
+110 BPM
+
+Default:
+75 BPM
+
+
+Important:
+
+get_bpm() generates the simulated/reference heart rate
+used to construct the ECG waveform.
+
+It is NOT the BPM measured by the ESP32.
+
+
+============================================================
+9. ECG MODE SELECTION
+============================================================
+
+Physical switch
+       |
+       v
+MODE0 / MODE1 / MODE2
+       |
+       v
+get_bpm()
+       |
+       v
+ECG waveform
+       |
+       v
+ECG_OUT
+
+
+The ESP32 does not read the mode pins.
+
+This prevents the ESP32 from simply knowing the answer
+that it is supposed to measure.
+
+
+============================================================
+10. CardialState.h
+============================================================
+
+Purpose:
+Defines the CardialState class.
+
+Responsibilities:
+
+- ECG acquisition
+- ECG sample buffering
+- R-peak storage
+- RR interval storage
+- BPM storage
+- ECG processing functions
+
+
+Important constants:
+
+BUFFER_SIZE = 2000
+SAMPLE_RATE = 250 Hz
+
+Sampling period:
+
+1000000 / 250 = 4000 us
+
+
+Important data:
+
+samples[2000]
+rPeaks[20]
+rPeakCount
+rrInterval
+bpm
+
+
+Constructor:
+
+CardialState(int ecgPin);
+
+
+The class no longer contains:
+
+MODE0
+MODE1
+MODE2
+
+or:
+
+getMode()
+
+
+============================================================
+11. CardialState.cpp
+============================================================
+
+Purpose:
+Implements ECG acquisition and heart-rate calculation.
+
+
+Constructor:
+
+Stores ECG ADC pin.
+
+Initializes:
+
+sampleIndex
+lastSampleTime
+rPeakCount
+rrInterval
+bpm
+
+
+begin():
+
+Configures ECG input and initializes timing.
+
+
+update():
+
+Runs ECG sampling at 250 Hz.
+
+Each sample:
+
+analogRead(ecgPin)
+
+
+After 2000 samples:
+
+processBuffer()
+
+
+is called.
+
+
+============================================================
+12. ECG SAMPLING
+============================================================
+
+Sampling frequency:
+
+250 Hz
+
+Buffer:
+
+2000 samples
+
+Time represented:
+
+2000 / 250 = 8 seconds
+
+
+Therefore the system processes approximately
+8 seconds of ECG data per buffer.
+
+
+============================================================
+13. R-PEAK DETECTION
+============================================================
+
+CardialState first finds:
+
+minimum ECG value
+maximum ECG value
+
+
+Adaptive threshold:
+
+threshold =
+    minValue
+    + 0.60f * (maxValue - minValue)
+
+
+A sample is considered an R peak when:
+
+- It is a local maximum
+- It is above the threshold
+- It is sufficiently far from the previous peak
+
+
+Refractory period:
+
+250 ms
+
+
+This prevents multiple detections of the same heartbeat.
+
+
+============================================================
+14. RR INTERVAL
+============================================================
+
+The last two detected R peaks are used.
+
+difference:
+
+r2 - r1
+
+
+Convert samples to seconds:
+
+RR =
+    difference / SAMPLE_RATE
+
+
+============================================================
+15. BPM CALCULATION
+============================================================
+
+BPM:
+
+60 / RR
+
+
+Expected values:
+
+55 BPM:
+RR ≈ 1.09 s
+
+75 BPM:
+RR = 0.80 s
+
+110 BPM:
+RR ≈ 0.545 s
+
+
+The ESP32 calculates these values from detected R peaks.
+
+
+============================================================
+16. InertialState.h
+============================================================
+
+Purpose:
+Defines the inertial subsystem.
+
+Responsibilities:
+
+- MPU6050 interface
+- Accelerometer data
+- Gyroscope data
+- Timing
+- Angle calculation
+- Kalman filter integration
+
+
+============================================================
+17. InertialState.cpp
+============================================================
+
+Purpose:
+Implements MPU6050 acquisition and angle estimation.
+
+Main process:
+
+MPU6050
+   |
+   +--> Accelerometer
+   |
+   +--> Gyroscope
+   |
+   v
+Angle estimation
+   |
+   v
+KalmanFilter
+
+
+============================================================
+18. KalmanFilter.h
+============================================================
+
+Purpose:
+Defines the Kalman filter used for angle estimation.
+
+State:
+
+angle
+bias
+
+
+The filter maintains the state and covariance information
+needed for estimation.
+
+
+============================================================
+19. KalmanFilter.cpp
+============================================================
+
+Purpose:
+Implements the Kalman filter prediction and correction steps.
+
+Inputs:
+
+- Accelerometer angle
+- Gyroscope angular rate
+- Time step
+
+
+Output:
+
+Filtered angle
+
+
+The filter estimates gyro bias while combining
+accelerometer and gyroscope information.
+
+
+============================================================
+20. libraries.txt
+============================================================
+
+Purpose:
+Documents libraries required by the project.
+
+Libraries include the dependencies required for:
+
+- ESP32
+- I2C
+- MPU6050
+
+
+============================================================
+21. project_req.txt
+============================================================
+
+Purpose:
+Documents the project requirements and intended functionality.
+
+This file is the reference for what the project is expected
+to implement.
+
+
+============================================================
+22. WOKWI + ARDUINO CLI BUILD PROCESS
+============================================================
+
+Step 1:
+Open the project folder in VS Code.
+
+
+Step 2:
+Open PowerShell in the project directory.
+
+
+Step 3:
+Check Arduino CLI:
+
+arduino-cli version
+
+
+Step 4:
+Compile:
+
+arduino-cli compile --fqbn esp32:esp32:esp32 --output-dir build .
+
+
+Step 5:
+Verify that compilation completes successfully.
+
+
+Step 6:
+Run the Wokwi simulation.
+
+
+============================================================
+23. WOKWI CUSTOM CHIP BUILD
+============================================================
+
+The ECG simulator consists of:
+
+ecgsim.chip.json
+ecgsim.chip.c
+
+
+The JSON defines the chip interface.
+
+The C file implements its behavior.
+
+
+The custom chip receives:
+
+MODE0
+MODE1
+MODE2
+
+
+and produces:
+
+ECG_OUT
+
+
+============================================================
+24. COMPLETE DATA FLOW
+============================================================
+
+                    PHYSICAL WORLD
+                          |
+                          v
+                   Slide switches
+                          |
+                          v
+                  ECG custom chip
+                          |
+                    get_bpm()
+                          |
+                          v
+                    ECG waveform
+                          |
+                       ECG_OUT
+                          |
+                          v
+                     ESP32 ADC
+                          |
+                          v
+                    CardialState
+                          |
+                  +-------+-------+
+                  |               |
+                  v               v
+              R-peaks          Samples
+                  |
+                  v
+              RR interval
+                  |
+                  v
+                  BPM
+
+
+Separately:
+
+                    MPU6050
+                       |
+                       v
+                 InertialState
+                       |
+                       v
+                 KalmanFilter
+                       |
+                       v
+                 Filtered angle
+
+
+============================================================
+25. TESTING
+============================================================
+
+SW1 / MODE0:
+
+Expected simulated heart rate:
+55 BPM
+
+Expected RR:
+~1.09 seconds
+
+
+SW2 / MODE1:
+
+Expected simulated heart rate:
+75 BPM
+
+Expected RR:
+0.80 seconds
+
+
+SW3 / MODE2:
+
+Expected simulated heart rate:
+110 BPM
+
+Expected RR:
+~0.545 seconds
+
+
+Only one mode switch should be active at a time.
+
+
+============================================================
+26. SERIAL OUTPUT
+============================================================
+
+The ESP32 prints:
+
+Angle
+Bias
+BPM
+RR
+
+
+Example:
+
+Angle: 180.02 | Bias: -55.13 | BPM: 54.95 | RR: 1.09
+
+
+ECG Mode is intentionally NOT printed.
+
+Reason:
+
+The ESP32 does not read the physical mode switches.
+
+
+============================================================
+27. IMPORTANT DESIGN PRINCIPLE
+============================================================
+
+The ECG custom chip simulates the patient.
+
+The ESP32 measures the simulated patient.
+
+The custom chip knows the simulated/reference BPM.
+
+CardialState independently derives BPM from ECG signal.
+
+
+Therefore:
+
+Simulation:
+
+Switch
+  -> ECG chip
+  -> simulated ECG
+
+
+Measurement:
+
+ECG
+  -> ADC
+  -> R-peak detection
+  -> RR
+  -> BPM
+
+
+This separation makes the system closer to an actual
+physiological monitoring architecture.
+
+
+============================================================
+28. GITHUB
+============================================================
+
+The project was initially developed locally.
+
+It can be uploaded into an existing GitHub repository
+using:
+
+Add file
+    ->
+Upload files
+
+
+The complete project folder should be uploaded to the
+appropriate project directory.
+
+
+============================================================
+29. QUICK REBUILD CHECKLIST
+============================================================
+
+[ ] Open project in VS Code
+
+[ ] Arduino CLI installed
+
+[ ] ESP32 core installed
+
+[ ] Wokwi extension installed
+
+[ ] Project files present
+
+[ ] ecgsim.chip.json present
+
+[ ] ecgsim.chip.c present
+
+[ ] diagram.json present
+
+[ ] wokwi-project.txt present
+
+[ ] Compile with Arduino CLI
+
+[ ] Start Wokwi
+
+[ ] Test SW1
+
+[ ] Test SW2
+
+[ ] Test SW3
+
+[ ] Verify BPM
+
+[ ] Verify RR
+
+[ ] Verify MPU6050 angle
+
+
+============================================================
+END
+============================================================

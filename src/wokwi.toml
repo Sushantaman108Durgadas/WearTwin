@@ -1,0 +1,8 @@
+[wokwi]
+version = 1
+firmware = 'build/MajorProject.ino.bin'
+elf = 'build/MajorProject.ino.elf'
+
+[[chip]]
+name = 'ecgsim'
+binary = 'ecgsim.chip.wasm'

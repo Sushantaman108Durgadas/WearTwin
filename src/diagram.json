@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "author": "Suyash Shirsat",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    {
+      "type": "wokwi-mpu6050",
+      "id": "imu1",
+      "top": 41.38,
+      "left": 156.52,
+      "rotate": 270,
+      "attrs": {}
+    },
+    { "type": "chip-ecgsim", "id": "chip1", "top": -8.58, "left": -148.8, "attrs": {} },
+    { "type": "wokwi-slide-switch", "id": "sw1", "top": -5.2, "left": -294.5, "attrs": {} },
+    { "type": "wokwi-slide-switch", "id": "sw2", "top": 263.6, "left": -73.7, "attrs": {} },
+    { "type": "wokwi-slide-switch", "id": "sw3", "top": -130, "left": -73.7, "attrs": {} },
+    { "type": "wokwi-vcc", "id": "vcc1", "top": 269.56, "left": -134.4, "attrs": {} },
+    { "type": "wokwi-vcc", "id": "vcc2", "top": 0.76, "left": -355.2, "attrs": {} },
+    { "type": "wokwi-vcc", "id": "vcc3", "top": -124.04, "left": -134.4, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "gnd1", "top": 297.6, "left": -10.2, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "gnd2", "top": -105.6, "left": -0.6, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "gnd3", "top": 48, "left": -221.4, "attrs": {} },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 243.95,
+      "left": -48,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r2",
+      "top": 301.55,
+      "left": -124.8,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r3",
+      "top": -140.05,
+      "left": -48,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r4",
+      "top": -92.05,
+      "left": -124.8,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r5",
+      "top": 32.75,
+      "left": -268.8,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r6",
+      "top": 32.75,
+      "left": -345.6,
+      "attrs": { "value": "1000" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:3V3", "imu1:VCC", "red", [ "h-4.61", "v-86.4", "h172.8" ] ],
+    [ "esp:GND.2", "imu1:GND", "black", [ "v0", "h43.24", "v19.2" ] ],
+    [ "imu1:SCL", "esp:22", "blue", [ "h-38.4", "v-9.68" ] ],
+    [ "esp:21", "imu1:SDA", "gold", [ "h24.04", "v-19.2" ] ],
+    [ "chip1:VCC", "esp:5V", "red", [ "h-28.8", "v201.6" ] ],
+    [ "chip1:GND", "esp:GND.1", "black", [ "h-19.2", "v115.2" ] ],
+    [ "chip1:ECG_OUT", "esp:34", "green", [ "h30.61", "v67.2" ] ],
+    [ "vcc2:VCC", "r6:1", "red", [ "v0" ] ],
+    [ "gnd3:GND", "r5:2", "black", [ "v0" ] ],
+    [ "r5:1", "sw1:3", "green", [ "v0" ] ],
+    [ "sw1:2", "chip1:MODE0", "green", [ "v38.4", "h38.5", "v-48" ] ],
+    [ "vcc1:VCC", "r2:1", "red", [ "v0" ] ],
+    [ "gnd1:GND", "r1:2", "black", [ "v0", "h9.6" ] ],
+    [ "r1:1", "sw2:3", "green", [ "v0" ] ],
+    [ "sw2:1", "r2:2", "green", [ "v0" ] ],
+    [ "sw2:2", "chip1:MODE1", "green", [ "v-259.2", "h19.3" ] ],
+    [ "sw3:2", "chip1:MODE2", "green", [ "v19.2", "h28.9", "v86.4" ] ],
+    [ "sw3:1", "r4:2", "green", [ "v0" ] ],
+    [ "vcc3:VCC", "r4:1", "red", [ "v0" ] ],
+    [ "gnd2:GND", "r3:2", "black", [ "v0" ] ],
+    [ "r3:1", "sw3:3", "green", [ "v0" ] ],
+    [ "sw1:1", "r6:2", "green", [ "v0" ] ]
+  ],
+  "dependencies": {}
+}

@@ -1,0 +1,13 @@
+{
+  "name": "ECG Simulator",
+  "author": "Suyash Shirsat",
+  "pins": [
+    "VCC",
+    "GND",
+    "MODE0",
+    "MODE1",
+    "MODE2",
+    "ECG_OUT"
+  ],
+  "controls": []
+}

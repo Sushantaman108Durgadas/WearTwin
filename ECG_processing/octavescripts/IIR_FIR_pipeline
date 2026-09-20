@@ -1,0 +1,177 @@
+clc; clearvars; close all;
+
+% 1. General Setup & Data Load
+Fs = 250;           % Sampling frequency (Hz)
+T = 1 / Fs;
+Q = 1 / sqrt(2);     % Butterworth quality factor
+
+ecg_data = csvread("synthetic_ecg_2000.csv");
+x = ecg_data(:,3);  
+N = length(x);
+t = (0:N-1) * T;    
+
+% =========================================================================
+% STAGE 1: Low-Pass IIR Filter (fc = 35 Hz) -> Removes High-Freq Noise
+% =========================================================================
+fc_lp = 35;
+K_lp = tan((2 * pi * fc_lp * T) / 2);
+denom_lp = 1 + (K_lp / Q) + (K_lp^2);
+
+b0_lp = (K_lp^2) / denom_lp;
+b1_lp = (2 * K_lp^2) / denom_lp;
+b2_lp = (K_lp^2) / denom_lp;
+a1_lp = (2 * (K_lp^2 - 1)) / denom_lp;
+a2_lp = (1 - (K_lp / Q) + (K_lp^2)) / denom_lp;
+
+y_lp = zeros(N, 1);
+
+for n = 1:N
+    x_n = x(n);
+    if n > 1, x_n1 = x(n-1); else, x_n1 = 0; end
+    if n > 2, x_n2 = x(n-2); else, x_n2 = 0; end
+    if n > 1, y_n1 = y_lp(n-1); else, y_n1 = 0; end
+    if n > 2, y_n2 = y_lp(n-2); else, y_n2 = 0; end
+    
+    y_lp(n) = (b0_lp * x_n) + (b1_lp * x_n1) + (b2_lp * x_n2) ...
+              - (a1_lp * y_n1) - (a2_lp * y_n2);
+end
+
+% =========================================================================
+% STAGE 2: High-Pass IIR Filter (fc = 0.5 Hz) -> Removes Baseline Wander
+% =========================================================================
+fc_hp = 0.5;
+K_hp = tan((2 * pi * fc_hp * T) / 2);
+denom_hp = 1 + (K_hp / Q) + (K_hp^2);
+
+b0_hp = 1 / denom_hp;
+b1_hp = -2 / denom_hp;
+b2_hp = 1 / denom_hp;
+a1_hp = (2 * (K_hp^2 - 1)) / denom_hp;
+a2_hp = (1 - (K_hp / Q) + (K_hp^2)) / denom_hp;
+
+y_clean = zeros(N, 1);
+
+% Pass low-pass output (y_lp) into the high-pass loop
+for n = 1:N
+    x_n = y_lp(n);
+    if n > 1, x_n1 = y_lp(n-1); else, x_n1 = 0; end
+    if n > 2, x_n2 = y_lp(n-2); else, x_n2 = 0; end
+    if n > 1, y_n1 = y_clean(n-1); else, y_n1 = 0; end
+    if n > 2, y_n2 = y_clean(n-2); else, y_n2 = 0; end
+    
+    y_clean(n) = (b0_hp * x_n) + (b1_hp * x_n1) + (b2_hp * x_n2) ...
+                 - (a1_hp * y_n1) - (a2_hp * y_n2);
+end
+
+% =========================================================================
+% Plot Comparison
+% =========================================================================
+figure(1);
+subplot(3,1,1); 
+plot(t, x); 
+title('1. Raw Input ECG'); grid on; ylabel('Amp');
+
+subplot(3,1,2); 
+plot(t, y_lp); 
+title('2. Low-Pass Filtered y\_lp[n] (35 Hz Cutoff)'); grid on; ylabel('Amp');
+
+subplot(3,1,3); 
+plot(t, y_clean); 
+title('3. Fully Processed ECG y\_clean[n] (LP + HP IIR Filtered)'); grid on; ylabel('Amp');
+xlabel('Time (s)');
+
+f = y_clean;
+F = fft(f);
+Fabs = abs(F);
+len = length(f);
+freq = Fs*(0:(len-1))/len;
+
+figure(2); plot(freq, Fabs); title('FFT before FIR Filtering');
+
+% =========================================================================
+% STAGE 3: Power-line Interference Removal (50 Hz FIR Notch Filter)
+% =========================================================================
+wc1 = 0.39*pi;
+wc2 = 0.41*pi;
+
+M = 91;
+shift = (M-1)/2;
+hds = zeros(1, M);
+
+for n = 0:1:M-1
+    if n ~= shift
+        hds(n+1) = sin(wc1*(n-shift))/(pi*(n-shift)) ...
+                 - sin(wc2*(n-shift))/(pi*(n-shift));
+    end
+endfor
+
+hds(shift+1) = 1 - (wc2-wc1)/pi;
+
+wrect = ones(1, M);
+h = hds .* wrect;
+
+y = conv(f, h, 'same');
+
+f = y;
+F = fft(f);
+Fabs = abs(F);
+len = length(f);
+freq = Fs*(0:(len-1))/len;
+
+figure(7); plot(freq, Fabs); title('FFT after 50Hz Notch Filter');
+
+% =========================================================================
+% STAGE 4: Baseline Wander Band Reject FIR Filter (0.2 Hz to 0.5 Hz)
+% =========================================================================
+% Cutoffs in normalized radians:
+% fc1 = 0.2 Hz => wc1_bw = (2*pi*0.2)/Fs = 0.0016*pi
+% fc2 = 0.5 Hz => wc2_bw = (2*pi*0.5)/Fs = 0.0040*pi
+wc1_bw = (2 * pi * 0.2 / Fs);
+wc2_bw = (2 * pi * 0.5 / Fs);
+
+M_bw = 1501;                     % Higher order required for low frequencies
+shift_bw = (M_bw - 1) / 2;
+hds_bw = zeros(1, M_bw);
+
+for n = 0:1:M_bw-1
+    if n ~= shift_bw
+        hds_bw(n+1) = sin(wc1_bw*(n-shift_bw))/(pi*(n-shift_bw)) ...
+                    - sin(wc2_bw*(n-shift_bw))/(pi*(n-shift_bw));
+    end
+endfor
+
+hds_bw(shift_bw+1) = 1 - (wc2_bw - wc1_bw)/pi;
+
+figure(8);
+plot(hds_bw);
+title('Ideal Baseline Wander Band Reject Impulse Response (0.2 Hz - 0.5 Hz)');
+
+wrect_bw = ones(1, M_bw);
+
+figure(9);
+plot(wrect_bw);
+title('Rectangular Window (Baseline Wander Filter)');
+
+h_bw = hds_bw .* wrect_bw;
+
+figure(10);
+plot(h_bw);
+title('Baseline Wander Band Reject FIR Filter');
+
+% Apply convolution to reject 0.2 Hz - 0.5 Hz band
+y_final = conv(f, h_bw, 'same');
+
+figure(11);
+plot(t, y_final);
+title('Final Filtered ECG (Baseline Wander 0.2-0.5 Hz Rejected)');
+xlabel('Time (s)'); ylabel('Amp'); grid on;
+
+% FFT of Final Output
+F_final = fft(y_final);
+Fabs_final = abs(F_final);
+freq_final = Fs*(0:(length(y_final)-1))/length(y_final);
+
+figure(12);
+plot(freq_final, Fabs_final);
+title('FFT Spectrum of Final ECG Signal');
+xlabel('Frequency (Hz)'); ylabel('Magnitude'); grid on;

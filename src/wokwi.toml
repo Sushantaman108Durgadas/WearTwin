@@ -1,7 +1,7 @@
 [wokwi]
 version = 1
-firmware = 'build/MajorProject.ino.bin'
-elf = 'build/MajorProject.ino.elf'
+firmware = 'build/src.ino.bin'
+elf = 'build/src.ino.elf'
 
 [[chip]]
 name = 'ecgsim'

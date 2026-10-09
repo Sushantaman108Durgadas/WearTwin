@@ -1,8 +1,14 @@
 [wokwi]
 version = 1
-firmware = 'build/WearTwin_FreeRTOS.ino.bin'
-elf = 'build/WearTwin_FreeRTOS.ino.elf'
+firmware = "build/esp32.esp32.esp32/WearTwin_FreeRTOS.ino.bin"
+elf = "build/esp32.esp32.esp32/WearTwin_FreeRTOS.ino.elf"
 
 [[chip]]
-name = 'ecgsim'
-binary = 'ecgsim.chip.wasm'
+name = "ppgchip"
+wasm = "ppgchip.chip.wasm"
+json = "ppgchip.chip.json"
+
+[[chip]]
+name = "ecgsim"
+wasm = "ecgsim.chip.wasm"
+json = "ecgsim.chip.json"

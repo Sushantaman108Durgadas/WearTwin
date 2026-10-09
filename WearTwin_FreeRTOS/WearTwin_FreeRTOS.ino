@@ -1,190 +1,109 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
+#include "I2CBusLock.h"
 #include "InertialState.h"
 #include "CardialState.h"
+#include "PpgState.h"
 
-
-/* ============================================================
- * Sensor Objects
- * ============================================================ */
+// Define the global I2C mutex declared as 'extern' in I2CBusLock.h
+SemaphoreHandle_t i2cBusMutex = nullptr;
 
 InertialState inertial;
-
-/*
- * ECG input:
- * GPIO34 is connected to the ECG simulator output.
- */
 CardialState cardiac(34);
+PpgState ppg;
 
+static const char *qualityText(PpgState::SignalQuality quality)
+{
+    switch (quality)
+    {
+        case PpgState::GOOD:     return "GOOD";
+        case PpgState::DEGRADED: return "DEGRADED";
+        case PpgState::POOR:     return "POOR";
+        case PpgState::NO_DATA:  return "NO_DATA";
+        default:                 return "WARMING_UP";
+    }
+}
 
-/* ============================================================
- * Setup
- * ============================================================ */
+void telemetryTask(void *parameter)
+{
+    (void)parameter;
+
+    while (true)
+    {
+        Serial.printf(
+            "Angle: %.2f | Bias: %.2f | Avg RR: %.4f | ECG BPM: %.2f\n",
+            inertial.getAngle(),
+            inertial.getBias(),
+            cardiac.getAverageRR(),
+            cardiac.getAverageBPM()
+        );
+
+        Serial.printf(
+            "PPG RED: %lu | IR: %lu | PI: %.2f%% | Motion artifact score: %.1f/100 | Quality: %s | SpO2 estimate: ",
+            (unsigned long)ppg.getRedRaw(),
+            (unsigned long)ppg.getIrRaw(),
+            ppg.getPerfusionIndex(),
+            ppg.getMotionScore(),
+            qualityText(ppg.getSignalQuality())
+        );
+
+        if (ppg.isEstimateValid())
+            Serial.printf("%.1f%%\n", ppg.getEstimatedSpO2());
+        else
+            Serial.println("UNAVAILABLE (signal quality too poor)");
+
+        Serial.println("--------------------------------------------------");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+static void stopOnFailure(const char *message)
+{
+    Serial.println(message);
+    while (true) delay(1000);
+}
 
 void setup()
 {
     Serial.begin(115200);
-
-    /*
-     * ESP32 I2C
-     *
-     * SDA = GPIO21
-     * SCL = GPIO22
-     */
     Wire.begin(21, 22);
+    Wire.setClock(100000);
 
-
-    /* --------------------------------------------------------
-     * Initialize IMU
-     * -------------------------------------------------------- */
+    // Create shared I2C bus mutex required by PpgState and InertialState
+    i2cBusMutex = xSemaphoreCreateMutex();
+    if (i2cBusMutex == nullptr)
+        stopOnFailure("I2C mutex creation failed.");
 
     if (!inertial.begin())
-    {
-        Serial.println(
-            "IMU initialization failed."
-        );
-
-        /*
-         * Stop here if IMU initialization fails.
-         */
-        while (true)
-        {
-            delay(1000);
-        }
-    }
-
-
-    /* --------------------------------------------------------
-     * Initialize ECG
-     * -------------------------------------------------------- */
+        stopOnFailure("IMU initialization failed.");
 
     if (!cardiac.begin())
-    {
-        Serial.println(
-            "ECG initialization failed."
-        );
+        stopOnFailure("ECG initialization failed.");
 
-        while (true)
-        {
-            delay(1000);
-        }
-    }
+    if (!ppg.begin())
+        stopOnFailure("PPG initialization failed; check chip registration and I2C wiring.");
 
+    if (!inertial.startTask())
+        stopOnFailure("Failed to start IMU task.");
 
-    /*
-     * Start ECG FreeRTOS tasks.
-     *
-     * Acquisition task:
-     *      samples ECG at 250 Hz
-     *
-     * Processing task:
-     *      processes complete 2000-sample windows
-     */
     if (!cardiac.startTasks())
-    {
-        Serial.println(
-            "ECG RTOS task initialization failed."
-        );
+        stopOnFailure("Failed to start ECG tasks.");
 
-        while (true)
-        {
-            delay(1000);
-        }
-    }
+    if (!ppg.startTask())
+        stopOnFailure("Failed to start PPG task.");
 
+    if (xTaskCreatePinnedToCore(
+            telemetryTask, "Telemetry", 4096, nullptr, 1, nullptr, 0) != pdPASS)
+        stopOnFailure("Failed to start telemetry task.");
 
-    Serial.println();
-    Serial.println(
-        "================================"
-    );
-
-    Serial.println(
-        "WearTwin system initialized."
-    );
-
-    Serial.println(
-        "ECG acquisition task started."
-    );
-
-    Serial.println(
-        "ECG processing task started."
-    );
-
-    Serial.println(
-        "================================"
-    );
+    Serial.println("WearTwin FreeRTOS system initialized.");
+    Serial.println("PPG estimate is experimental simulation output, not a medical measurement.");
 }
-
-
-/* ============================================================
- * Main Loop
- *
- * IMPORTANT:
- *
- * ECG acquisition and ECG processing are NOT performed here.
- *
- * They are handled by FreeRTOS tasks inside CardialState.
- *
- * loop() is therefore free for:
- *
- * - IMU
- * - temperature
- * - PPG
- * - SpO2
- * - communication
- * - gateway transmission
- * - future WearTwin processing
- *
- * ============================================================ */
 
 void loop()
 {
-    /* --------------------------------------------------------
-     * IMU
-     * -------------------------------------------------------- */
-
-    float angle = inertial.update();
-
-
-    /* --------------------------------------------------------
-     * Periodic system information
-     * -------------------------------------------------------- */
-
-    static unsigned long lastPrint = 0;
-
-
-    if (
-        millis() - lastPrint >= 1000
-    )
-    {
-        lastPrint = millis();
-
-
-        Serial.print(
-            "Angle: "
-        );
-
-        Serial.print(
-            angle
-        );
-
-
-        Serial.print(
-            " | Bias: "
-        );
-
-        Serial.print(
-            inertial.getBias()
-        );
-
-
-        Serial.print(
-            " | Avg BPM: "
-        );
-
-        Serial.println(
-            cardiac.getAverageBPM()
-        );
-    }
+    vTaskDelay(pdMS_TO_TICKS(1000));
 }

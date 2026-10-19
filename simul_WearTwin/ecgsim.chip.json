@@ -1,0 +1,19 @@
+{
+  "name": "ECG Simulator",
+  "author": "Suyash Shirsat",
+  "pins": [
+    "VCC",
+    "GND",
+    "ECG_OUT"
+  ],
+  "controls": [
+    {
+      "id": "heartRateBpm",
+      "label": "Heart Rate (BPM)",
+      "type": "range",
+      "min": 40,
+      "max": 180,
+      "step": 1
+    }
+  ]
+}

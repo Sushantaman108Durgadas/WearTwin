@@ -1,0 +1,82 @@
+**WearTwin: A Digital Twin for Soldiers monitoring physiological state.**
+
+1) Architecture:
+  [Wearable ESP32 nodes]
+        │
+        │ BLE / Wi-Fi / LoRa
+        ▼
+[Raspberry Pi edge gateway]
+        │
+        ├── Data ingestion
+        ├── Time synchronization
+        ├── Signal processing
+        ├── Feature extraction
+        ├── AI inference
+        ├── Digital Twin database
+        └── Local dashboard
+                │
+                ▼
+  [Medic / commander display]
+
+2) Implementation order
+Phase 1: One wearable, no AI
+Read PPG, IMU, temperature.
+
+Transmit to PC.
+
+Plot live signals.
+
+Save synchronized data.
+
+Phase 2: Raspberry Pi gateway
+Move MQTT broker and receiver to Pi.
+
+Add SQLite storage.
+
+Run local dashboard.
+
+Demonstrate offline operation.
+
+Phase 3: Feature extraction
+HR.
+
+Activity.
+
+Temperature trend.
+
+Motion intensity.
+
+Signal quality.
+
+Phase 4: Operational readiness
+Implement threshold baseline.
+
+Create normal/elevated/high states.
+
+Add squad dashboard.
+
+Phase 5: AI model
+Collect controlled data.
+
+Train on PC.
+
+Quantize and deploy on Pi.
+
+Compare with baseline.
+
+Phase 6: Casualty and recovery modes
+Add simulated casualty replay.
+
+Add rehabilitation-session protocol.
+
+Add mobility and recovery trends.
+
+Phase 7: Validation and documentation
+Run repeatable experiments.
+
+Report limitations.
+
+Demonstrate PC training versus Pi deployment.
+
+Document interfaces, timing, power, and failure handling.
+    

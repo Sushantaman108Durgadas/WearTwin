@@ -1,0 +1,8 @@
+[wokwi]
+version = 1
+firmware = 'build/simul_WearTwin.ino.bin'
+elf = 'build/simul_WearTwin.ino.elf'
+
+[[chip]]
+name = 'ecgsim'
+binary = 'ecgsim.chip.wasm'

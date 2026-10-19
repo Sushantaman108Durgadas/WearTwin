@@ -7,29 +7,32 @@
 constexpr uint8_t SDA_PIN = 21;
 constexpr uint8_t SCL_PIN = 22;
 
-constexpr int32_t BUFFER_SIZE = 100;
-constexpr int32_t HOP_SIZE = 25;
+constexpr int32_t PPG_BUFFER_SIZE = 100;
+constexpr int32_t PPG_HOP_SIZE = 25;
 
 MAX30105 maxSensor;
 
-uint32_t irBuffer[BUFFER_SIZE];
-uint32_t redBuffer[BUFFER_SIZE];
-uint32_t nextIR[HOP_SIZE];
-uint32_t nextRed[HOP_SIZE];
+uint32_t irBuffer[PPG_BUFFER_SIZE];
+uint32_t redBuffer[PPG_BUFFER_SIZE];
+
+uint32_t nextIR[PPG_HOP_SIZE];
+uint32_t nextRed[PPG_HOP_SIZE];
 
 int32_t samplesFilled = 0;
 int32_t hopFilled = 0;
 
 int32_t bpm = 0;
 int32_t spo2 = 0;
+
 int8_t bpmValid = 0;
 int8_t spo2Valid = 0;
+
 bool algorithmReady = false;
 
 void calculateSpO2() {
     maxim_heart_rate_and_oxygen_saturation(
         irBuffer,
-        BUFFER_SIZE,
+        PPG_BUFFER_SIZE,
         redBuffer,
         &spo2,
         &spo2Valid,
@@ -41,34 +44,47 @@ void calculateSpO2() {
 }
 
 void processSample(uint32_t red, uint32_t ir) {
-    if (samplesFilled < BUFFER_SIZE) {
+    // Fill the initial 100-sample window.
+    if (samplesFilled < PPG_BUFFER_SIZE) {
         redBuffer[samplesFilled] = red;
         irBuffer[samplesFilled] = ir;
+
         samplesFilled++;
 
-        if (samplesFilled == BUFFER_SIZE) {
+        if (samplesFilled == PPG_BUFFER_SIZE) {
             calculateSpO2();
             hopFilled = 0;
         }
+
         return;
     }
 
+    // Collect the next 25 samples.
     nextRed[hopFilled] = red;
     nextIR[hopFilled] = ir;
+
     hopFilled++;
 
-    if (hopFilled >= HOP_SIZE) {
-        for (int i = 0; i < BUFFER_SIZE - HOP_SIZE; i++) {
-            redBuffer[i] = redBuffer[i + HOP_SIZE];
-            irBuffer[i] = irBuffer[i + HOP_SIZE];
+    if (hopFilled >= PPG_HOP_SIZE) {
+        // Shift the existing window left by 25 samples.
+        for (int32_t i = 0;
+             i < PPG_BUFFER_SIZE - PPG_HOP_SIZE;
+             i++) {
+            redBuffer[i] = redBuffer[i + PPG_HOP_SIZE];
+            irBuffer[i] = irBuffer[i + PPG_HOP_SIZE];
         }
 
-        for (int i = 0; i < HOP_SIZE; i++) {
-            redBuffer[BUFFER_SIZE - HOP_SIZE + i] = nextRed[i];
-            irBuffer[BUFFER_SIZE - HOP_SIZE + i] = nextIR[i];
+        // Append the latest 25 samples.
+        for (int32_t i = 0; i < PPG_HOP_SIZE; i++) {
+            redBuffer[PPG_BUFFER_SIZE - PPG_HOP_SIZE + i]
+                = nextRed[i];
+
+            irBuffer[PPG_BUFFER_SIZE - PPG_HOP_SIZE + i]
+                = nextIR[i];
         }
 
         hopFilled = 0;
+
         calculateSpO2();
     }
 }
@@ -82,12 +98,14 @@ void setup() {
 
     if (!maxSensor.begin(Wire, I2C_SPEED_FAST)) {
         Serial.println("# ERROR: MAX30102 not detected");
-        while (true) delay(1000);
+
+        while (true) {
+            delay(1000);
+        }
     }
 
-    // Same configuration as your combined firmware:
-    // brightness, averaging, LED mode, sample rate,
-    // pulse width and ADC range.
+    // brightness, averaging, LED mode,
+    // sample rate, pulse width, ADC range
     maxSensor.setup(0x1F, 4, 2, 100, 411, 4096);
 
     Serial.println(
@@ -105,7 +123,6 @@ void loop() {
 
         processSample(red, ir);
 
-        // Timestamp each actual PPG sample as it is read.
         Serial.printf(
             "%lu,%lu,%lu,%ld,%d,%ld,%d\n",
             (unsigned long)millis(),

@@ -3,8 +3,8 @@ import numpy as np
 from pathlib import Path
 
 STATIONARY = Path("hardware/rawdata_leftthumb_stationary.csv")
-MOVING = Path("hardware/rawdata_leftthumb_motion.csv")
-OUT = Path("hardware/rawdata_leftthumb_motion_clean.csv")
+MOVING = Path("hardware/rawdata_leftthumb_moving.csv")
+OUT = Path("hardware/rawdata_leftthumb_moving_clean.csv")
 
 def read_csv(path):
     # Keep original timestamp text so corrupted timestamp strings can be identified.

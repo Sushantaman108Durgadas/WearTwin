@@ -1,0 +1,14 @@
+{
+  "stationary_resampled_samples": 5106,
+  "moving_resampled_samples": 5197,
+  "stationary_windows": 39,
+  "train_windows": 31,
+  "validation_windows": 8,
+  "sample_rate_hz": 10.0,
+  "window_samples": 256,
+  "window_seconds": 25.6,
+  "stride_samples": 128,
+  "best_validation_l1_synthetic_corruption": 0.30745190382003784,
+  "device": "cpu",
+  "warning": "Synthetic-corruption validation measures only the synthetic task. It does not establish real motion-artifact removal or medical accuracy."
+}

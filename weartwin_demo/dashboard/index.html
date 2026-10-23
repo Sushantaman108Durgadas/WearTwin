@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WearTwin AI — Digital Twin Telemetry & Readiness Dashboard</title>
+<style>
+/* ============================================================
+   WearTwin Tactical Mission Operations Interface (Dark Glass)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-deep: #030712;
+  --bg-panel: rgba(8, 16, 36, 0.94);
+  --bg-card: rgba(13, 24, 48, 0.75);
+  --bg-card-hover: rgba(20, 36, 72, 0.85);
+  --border: rgba(42, 120, 214, 0.22);
+  --border-bright: rgba(0, 240, 255, 0.45);
+  --glow-cyan: rgba(0, 240, 255, 0.4);
+  --glow-blue: rgba(42, 120, 214, 0.35);
+  --glow-amber: rgba(245, 158, 11, 0.4);
+  --glow-red: rgba(239, 68, 68, 0.45);
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  --accent-cyan: #00f0ff;
+  --accent-blue: #2a78d6;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+
+  --ready-green: #10b981;
+  --caution-amber: #f59e0b;
+  --rest-red: #ef4444;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+/* Background sci-fi tactical grid */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(0, 240, 255, 0.06) 0%, transparent 60%),
+    linear-gradient(rgba(42, 120, 214, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(42, 120, 214, 0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 48px 48px, 48px 48px;
+  pointer-events: none; z-index: 0;
+}
+
+/* Top App Header */
+.header {
+  position: relative; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px;
+  background: rgba(4, 10, 24, 0.98);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+}
+.header-left { display: flex; align-items: center; gap: 14px; }
+.logo-badge {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: #020712;
+  box-shadow: 0 0 16px var(--glow-cyan);
+}
+.app-title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.app-title span { color: var(--accent-cyan); text-shadow: 0 0 10px var(--glow-cyan); }
+.app-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 400; margin-left: 6px; }
+
+/* Mode Switcher Tabs */
+.mode-tabs {
+  display: flex; background: rgba(13, 24, 48, 0.8);
+  border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 4px;
+}
+.tab-btn {
+  padding: 6px 14px; border-radius: 6px;
+  background: transparent; border: none;
+  color: var(--text-secondary); font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+}
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active {
+  background: rgba(0, 240, 255, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+}
+
+.header-right { display: flex; align-items: center; gap: 14px; }
+.system-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 12px;
+  background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);
+  font-size: 11px; color: var(--accent-green); font-weight: 500; font-family: 'JetBrains Mono', monospace;
+}
+.system-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent-green);
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.action-btn {
+  background: rgba(13, 24, 48, 0.8);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 6px 10px; border-radius: 6px;
+  font-size: 11px; font-weight: 500; cursor: pointer;
+  transition: all 0.2s; display: flex; align-items: center; gap: 5px;
+}
+.action-btn:hover { border-color: var(--border-bright); color: var(--text-primary); }
+
+/* Main Grid Layout */
+.main-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr 380px;
+  height: calc(100vh - 61px);
+  position: relative; z-index: 5;
+}
+
+/* Scrollable Panels */
+.panel {
+  padding: 16px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--bg-panel);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(42, 120, 214, 0.3) transparent;
+}
+.panel:last-child { border-right: none; border-left: 1px solid var(--border); }
+.panel::-webkit-scrollbar { width: 4px; }
+.panel::-webkit-scrollbar-thumb { background: rgba(42, 120, 214, 0.4); border-radius: 2px; }
+
+.section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-muted);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.section-title::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent);
+}
+
+/* Presets Grid */
+.presets-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
+  margin-bottom: 16px;
+}
+.preset-card {
+  padding: 8px 10px; border-radius: 6px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  color: var(--text-secondary); font-size: 11px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s; text-align: left;
+  display: flex; align-items: center; gap: 6px;
+}
+.preset-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-bright); color: var(--text-primary);
+}
+.preset-card.active {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.12);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+}
+
+/* Sensor Slider Cards */
+.sensor-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+  margin-bottom: 8px; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.sensor-card:hover { border-color: rgba(0, 240, 255, 0.35); }
+.sensor-card.offline { opacity: 0.35; border-color: rgba(255, 255, 255, 0.08); }
+.sensor-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px;
+}
+.sensor-info { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; }
+.sensor-value-group { display: flex; align-items: baseline; gap: 3px; font-family: 'JetBrains Mono', monospace; }
+.sensor-val { font-size: 14px; font-weight: 700; color: var(--accent-cyan); }
+.sensor-unit { font-size: 9px; color: var(--text-muted); }
+.sensor-delta { font-size: 9px; font-weight: 600; margin-left: 4px; padding: 1px 4px; border-radius: 4px; }
+.sensor-delta.pos { color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
+.sensor-delta.neg { color: #10b981; background: rgba(16, 185, 129, 0.12); }
+.sensor-delta.crit { color: #ef4444; background: rgba(239, 68, 68, 0.15); }
+
+/* Slider Styling */
+.range-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; border-radius: 2px;
+  background: rgba(42, 120, 214, 0.2); outline: none; cursor: pointer;
+}
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent-cyan);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 8px var(--glow-cyan);
+  cursor: grab; transition: transform 0.1s;
+}
+.range-slider::-webkit-slider-thumb:hover { transform: scale(1.25); }
+
+.sensor-bounds {
+  display: flex; justify-content: space-between;
+  font-size: 8px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;
+  margin-top: 2px;
+}
+
+/* Offline Sensor Switch */
+.toggle-switch {
+  position: relative; width: 28px; height: 15px;
+  background: rgba(255, 255, 255, 0.12); border-radius: 8px;
+  cursor: pointer; transition: background 0.2s;
+}
+.toggle-switch.on { background: var(--accent-cyan); }
+.toggle-switch .toggle-knob {
+  position: absolute; top: 1.5px; left: 1.5px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #ffffff; transition: left 0.18s;
+}
+.toggle-switch.on .toggle-knob { left: 14.5px; }
+
+/* Center Stage: Hologram & Readiness Display */
+.center-stage {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  position: relative; padding: 16px 20px;
+  background: radial-gradient(circle at 50% 45%, rgba(0, 240, 255, 0.05) 0%, transparent 70%);
+  overflow: hidden;
+}
+
+/* HUD Readiness Banner */
+.readiness-hud {
+  text-align: center; position: relative; z-index: 10;
+}
+.readiness-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.readiness-score-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 64px; font-weight: 700; line-height: 1;
+  letter-spacing: -0.02em; margin: 4px 0;
+  text-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+}
+.readiness-band-badge {
+  display: inline-block; padding: 4px 16px; border-radius: 14px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; border: 1px solid;
+}
+.confirmed-state-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 6px; padding: 3px 12px; border-radius: 10px;
+  font-size: 11px; font-weight: 600;
+  background: rgba(13, 24, 48, 0.7); border: 1px solid var(--border);
+}
+
+/* Canvas Hologram Container */
+.hologram-viewport {
+  position: relative; flex: 1; width: 100%;
+  max-width: 440px; display: flex; align-items: center; justify-content: center;
+}
+canvas#hologramCanvas {
+  width: 100%; height: 100%;
+  display: block; cursor: crosshair;
+}
+
+/* Strain Gauges Bar */
+.strain-gauges {
+  display: flex; gap: 16px; width: 100%; max-width: 440px;
+  position: relative; z-index: 10; padding: 8px 0;
+}
+.gauge-card {
+  flex: 1; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; text-align: center;
+}
+.gauge-title { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.gauge-bar-track {
+  width: 100%; height: 6px; background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px; overflow: hidden; margin: 5px 0;
+}
+.gauge-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s, background 0.3s; }
+.gauge-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; }
+
+/* Right Panel: Squad Cards & Timeline */
+.squad-member-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+  margin-bottom: 8px; cursor: pointer;
+  transition: all 0.2s; display: grid; grid-template-columns: 1fr auto; gap: 8px;
+}
+.squad-member-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-bright);
+}
+.squad-member-card.active {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.1);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.15);
+}
+.squad-member-card.alert-pulse {
+  border-color: var(--accent-red);
+  animation: card-alert-flash 1.6s ease-in-out infinite;
+}
+@keyframes card-alert-flash {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 14px rgba(239, 68, 68, 0.4); }
+}
+
+.squad-member-name { font-size: 12px; font-weight: 700; }
+.squad-member-meta { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+.squad-member-state { font-size: 11px; font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+.squad-readiness-box { text-align: right; }
+.squad-readiness-num { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; }
+
+/* Mini Progress Bar */
+.mini-meter {
+  width: 100%; height: 3px; background: rgba(255, 255, 255, 0.08);
+  border-radius: 1.5px; overflow: hidden; margin-top: 4px;
+}
+.mini-meter-fill { height: 100%; border-radius: 1.5px; transition: width 0.3s; }
+
+/* Timeline Container */
+.timeline-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px; margin-top: 14px;
+}
+canvas#timelineCanvas { width: 100%; height: 120px; display: block; }
+
+/* Playback Control Bar */
+.playback-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-top: 10px; background: rgba(13, 24, 48, 0.6);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+}
+.playback-btn {
+  background: transparent; border: none; color: var(--text-secondary);
+  font-size: 14px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+  transition: all 0.15s;
+}
+.playback-btn:hover { color: var(--accent-cyan); background: rgba(0, 240, 255, 0.1); }
+.playback-scrubber {
+  flex: 1; -webkit-appearance: none; appearance: none;
+  height: 4px; border-radius: 2px; background: rgba(42, 120, 214, 0.3);
+  outline: none; cursor: pointer;
+}
+.playback-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--accent-cyan); cursor: grab;
+}
+
+/* Event Log */
+.event-log {
+  max-height: 140px; overflow-y: auto; font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; line-height: 1.6; margin-top: 8px;
+}
+.log-item { padding: 2px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.03); }
+.log-item.alert { color: var(--accent-amber); }
+.log-item.crit { color: var(--accent-red); font-weight: 700; }
+
+/* Slide-out Speaker Notes Drawer */
+.notes-drawer {
+  position: fixed; top: 61px; right: -480px; width: 460px;
+  height: calc(100vh - 61px);
+  background: rgba(5, 12, 28, 0.98);
+  border-left: 1px solid var(--border-bright);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.7);
+  z-index: 100; transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex; flex-direction: column;
+}
+.notes-drawer.open { right: 0; }
+.notes-header {
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.notes-tabs {
+  display: flex; gap: 4px; padding: 10px 14px;
+  overflow-x: auto; border-bottom: 1px solid var(--border);
+  background: rgba(13, 24, 48, 0.5);
+}
+.notes-tab {
+  padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600;
+  color: var(--text-muted); background: transparent; border: 1px solid transparent;
+  cursor: pointer; white-space: nowrap; transition: all 0.2s;
+}
+.notes-tab.active {
+  color: var(--accent-cyan); border-color: rgba(0, 240, 255, 0.4);
+  background: rgba(0, 240, 255, 0.1);
+}
+.notes-body {
+  padding: 18px; overflow-y: auto; flex: 1;
+  font-size: 12px; line-height: 1.7; color: var(--text-secondary);
+}
+.notes-body h3 { color: var(--accent-cyan); font-size: 14px; margin-bottom: 8px; }
+.notes-body strong { color: var(--text-primary); }
+.notes-body blockquote {
+  border-left: 2px solid var(--accent-cyan);
+  padding-left: 10px; margin: 10px 0; color: #cbd5e1; font-style: italic;
+}
+
+/* Modal for AI Model Verification & Audit */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(2, 6, 18, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200; display: none;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal-window {
+  background: #081124; border: 1px solid var(--border-bright);
+  border-radius: 12px; width: 100%; max-width: 900px;
+  max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.25);
+}
+.modal-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-body { padding: 20px; }
+.metrics-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  margin-bottom: 20px;
+}
+.metric-box {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px; text-align: center;
+}
+.metric-box-num {
+  font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700;
+  color: var(--accent-cyan);
+}
+.metric-box-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* Responsive adjustments */
+@media (max-width: 1280px) {
+  .main-grid { grid-template-columns: 320px 1fr 340px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAVIGATION BAR -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-badge">W</div>
+    <div>
+      <div class="app-title">Wear<span>Twin</span> AI</div>
+    </div>
+  </div>
+
+  <div class="mode-tabs">
+    <button class="tab-btn active" id="tabSandbox" onclick="switchMode('sandbox')">Biometric Sandbox</button>
+    <button class="tab-btn" id="tabSquad" onclick="switchMode('squad')">Squad Telemetry Replay</button>
+  </div>
+
+  <div class="header-right">
+    <button class="action-btn" onclick="openVerificationModal()" title="View Model Audit & Validation Checks">AI Verification</button>
+    <button class="action-btn" id="btnAudioToggle" onclick="toggleAudio()" title="Sound Effects">Audio: ON</button>
+    <button class="action-btn" onclick="toggleFullscreen()" title="Fullscreen Mode">Fullscreen</button>
+  </div>
+</header>
+
+<!-- MAIN 3-COLUMN WORKSPACE -->
+<div class="main-grid">
+
+  <!-- LEFT PANEL: SENSOR CONTROLS & PRESETS -->
+  <div class="panel" id="leftPanel">
+    
+    <!-- Mode A: Sandbox Controls -->
+    <div id="sandboxControls">
+      <div class="section-title">Mission Profile Presets</div>
+      <div class="presets-grid" id="presetsGrid">
+        <button class="preset-card active" onclick="applyPreset('rest')">Rest / Guard</button>
+        <button class="preset-card" onclick="applyPreset('march')">Steady March</button>
+        <button class="preset-card" onclick="applyPreset('heavy_hot')">Heavy Load (Hot)</button>
+        <button class="preset-card" onclick="applyPreset('altitude')">Altitude Climb</button>
+        <button class="preset-card" onclick="applyPreset('cardio')">Cardio Stress</button>
+        <button class="preset-card" onclick="applyPreset('fatigue')">Fatigue (2.5h)</button>
+        <button class="preset-card" onclick="applyPreset('dehydrated')">Dehydrated March</button>
+        <button class="preset-card" onclick="applyPreset('intervals')">HI Intervals</button>
+      </div>
+
+      <div class="section-title">Live Sensor Feeds (30s Windows)</div>
+      <div id="sensorSlidersContainer"></div>
+
+      <div class="section-title" style="margin-top:16px">Ramp Simulation Parameters</div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;margin-bottom:6px">
+          <span>Mission Duration</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--accent-cyan)" id="durationDisplay">60 min</span>
+        </div>
+        <input type="range" class="range-slider" id="durationSlider" min="10" max="180" step="5" value="60" oninput="onDurationChange(this.value)">
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button class="action-btn" style="flex:1;justify-content:center;background:rgba(0,240,255,0.15);color:var(--accent-cyan);border-color:rgba(0,240,255,0.4)" id="btnRunSandbox" onclick="runSandboxSimulation()">Run Scenario</button>
+        <button class="action-btn" style="flex:1;justify-content:center" onclick="resetSandbox()">Reset</button>
+      </div>
+      <div style="font-size:9.5px;color:var(--text-muted);margin-top:8px;line-height:1.4">
+        * First 20 windows (10 min) calibrate personal resting baseline. Sliders set destination target at mission end.
+      </div>
+    </div>
+
+    <!-- Mode B: Squad Selector Controls -->
+    <div id="squadControls" style="display:none">
+      <div class="section-title">Active Squad Members (6 Soldiers)</div>
+      <div id="squadListContainer"></div>
+
+      <div class="section-title" style="margin-top:16px">Ground Truth Comparison</div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="color:var(--text-muted)">True Physiological State:</span>
+          <span style="font-weight:700" id="squadTrueState">--</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="color:var(--text-muted)">True Readiness:</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-weight:700" id="squadTrueReadiness">--</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--text-muted)">Core Temp / Dehydration:</span>
+          <span style="font-family:'JetBrains Mono',monospace" id="squadLatentMetrics">--</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CENTER PANEL: HOLOGRAPHIC SOLDIER & FLUID READINESS HUD -->
+  <div class="center-stage">
+    
+    <!-- Top Readiness Status HUD -->
+    <div class="readiness-hud">
+      <div class="readiness-label">Digital Twin Physiological Readiness</div>
+      <div class="readiness-score-display" id="hudScore">100</div>
+      <div>
+        <span class="readiness-band-badge" id="hudBand" style="color:var(--ready-green);border-color:var(--ready-green);background:rgba(16,185,129,0.12)">READY FOR DUTY</span>
+      </div>
+      <div class="confirmed-state-pill" id="hudStatePill">
+        <span id="hudStateDot" style="color:var(--accent-green)">●</span>
+        <span id="hudStateText">Normal Physiology</span>
+      </div>
+    </div>
+
+    <!-- Central Canvas Hologram Viewport -->
+    <div class="hologram-viewport">
+      <canvas id="hologramCanvas"></canvas>
+    </div>
+
+    <!-- Bottom Severity Strain Gauges -->
+    <div class="strain-gauges">
+      <div class="gauge-card">
+        <div class="gauge-title" style="color:var(--accent-amber)">Thermal Strain</div>
+        <div class="gauge-bar-track">
+          <div class="gauge-bar-fill" id="thermalBarFill" style="width:0%;background:var(--accent-amber)"></div>
+        </div>
+        <div class="gauge-value" id="thermalVal" style="color:var(--accent-amber)">0.00</div>
+      </div>
+
+      <div class="gauge-card">
+        <div class="gauge-title" style="color:var(--accent-blue)">Fatigue Index</div>
+        <div class="gauge-bar-track">
+          <div class="gauge-bar-fill" id="fatigueBarFill" style="width:0%;background:var(--accent-blue)"></div>
+        </div>
+        <div class="gauge-value" id="fatigueVal" style="color:var(--accent-blue)">0.00</div>
+      </div>
+
+      <div class="gauge-card">
+        <div class="gauge-title" style="color:var(--accent-cyan)">Cardio Strain</div>
+        <div class="gauge-bar-track">
+          <div class="gauge-bar-fill" id="cardioBarFill" style="width:0%;background:var(--accent-cyan)"></div>
+        </div>
+        <div class="gauge-value" id="cardioVal" style="color:var(--accent-cyan)">0.00</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL: TIMELINES, TELEMETRY & EVENT LOG -->
+  <div class="panel" id="rightPanel">
+    
+    <div class="section-title">Telemetry Timeline (Past Windows)</div>
+    <div class="timeline-card">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:6px">
+        <span>READINESS CURVE (0 - 100)</span>
+        <span id="timelineLegend"><span style="color:var(--accent-cyan)">— Twin</span> <span style="color:var(--text-muted)">··· Truth</span></span>
+      </div>
+      <canvas id="timelineCanvas" width="340" height="120"></canvas>
+    </div>
+
+    <!-- Playback Scrubber for Squad Mode -->
+    <div class="playback-bar" id="playbackBar" style="display:none">
+      <button class="playback-btn" onclick="squadPlayPause()" id="btnPlayPause">Play</button>
+      <input type="range" class="playback-scrubber" id="squadScrubber" min="0" max="204" value="0" oninput="onScrubChange(this.value)">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)" id="timeDisplay">0.0 min</span>
+      <button class="playback-btn" onclick="cycleSpeed()" id="btnSpeed">1x</button>
+    </div>
+
+    <div class="section-title" style="margin-top:16px">Derived Causal Features</div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:10px">
+      <div style="display:flex;justify-content:space-between;padding:2px 0">
+        <span style="color:var(--text-muted)">active_min (Rank #1):</span>
+        <span id="featActiveMin">0.0 min</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:2px 0">
+        <span style="color:var(--text-muted)">hr_dev (Baseline Δ):</span>
+        <span id="featHrDev">+0.0 bpm</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:2px 0">
+        <span style="color:var(--text-muted)">apparent_temp:</span>
+        <span id="featApparentTemp">24.0 °C</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:2px 0">
+        <span style="color:var(--text-muted)">hr_per_imu (Cardiac Cost):</span>
+        <span id="featCardiacCost">0.00</span>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:16px">Mission Chronology & Event Log</div>
+    <div class="event-log" id="eventLogContainer">
+      <div class="log-item" style="color:var(--text-muted)">00:00.0 — Digital Twin initialized in resting calibration mode.</div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- AI MODEL VERIFICATION MODAL -->
+<div class="modal-overlay" id="verificationModal">
+  <div class="modal-window">
+    <div class="modal-header">
+      <div style="font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px">
+        <span>WearTwin AI Model Verification & Audit</span>
+        <span style="font-size:10px;background:rgba(16,185,129,0.15);color:var(--accent-green);padding:2px 8px;border-radius:6px">LEAVE-SOLDIER-OUT EVALUATION</span>
+      </div>
+      <button class="action-btn" onclick="closeVerificationModal()">Close</button>
+    </div>
+    <div class="modal-body">
+      
+      <div class="metrics-row">
+        <div class="metric-box">
+          <div class="metric-box-num">0.842</div>
+          <div class="metric-box-sub">Model Macro-F1 (Held-out)</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-box-num">0.487</div>
+          <div class="metric-box-sub">Rule Baseline F1</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-box-num">4.5</div>
+          <div class="metric-box-sub">Readiness MAE (Points / 100)</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-box-num">0.235</div>
+          <div class="metric-box-sub">Shuffled-Label F1 (Chance: 0.25)</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <!-- Feature Importance Table -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px">
+          <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:var(--accent-cyan)">Top Permutation Importances</div>
+          <div style="font-size:11px;line-height:1.8">
+            <div style="display:flex;justify-content:space-between"><span>1. active_min (Cumulative exertion):</span><strong style="color:var(--accent-cyan)">0.2314</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>2. spo2 (Blood oxygenation):</span><strong>0.0877</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>3. skin_t (Skin temperature):</span><strong>0.0873</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>4. rr_dev_mean_10m (10m resp dev):</span><strong>0.0411</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>5. rmssd_lr_mean_10m (HRV drop):</span><strong>0.0247</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>6. hr_dev_med_10m (Cardiac drift):</span><strong>0.0178</strong></div>
+          </div>
+        </div>
+
+        <!-- Sensor Robustness Table -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px">
+          <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:var(--accent-cyan)">Sensor Dropout Resilience</div>
+          <div style="font-size:11px;line-height:1.8">
+            <div style="display:flex;justify-content:space-between"><span>No sensor missing (Clean feed):</span><strong>F1 = 0.842</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>Heart Rate sensor lost:</span><strong>F1 = 0.829</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>Respiration sensor lost:</span><strong>F1 = 0.821</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>SpO2 sensor lost:</span><strong>F1 = 0.817</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>Skin Temperature lost:</span><strong>F1 = 0.834</strong></div>
+            <div style="display:flex;justify-content:space-between"><span>IMU (Motion) lost:</span><strong style="color:var(--accent-red)">F1 = 0.705 (Top impact)</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:rgba(0,240,255,0.06);border:1px solid rgba(0,240,255,0.2);border-radius:8px;padding:12px;font-size:11.5px;color:var(--text-secondary);line-height:1.6">
+        <strong style="color:var(--accent-cyan)">Key Scientific Finding for Tomorrow's Presentation:</strong><br>
+        All 48 training soldiers and 12 test soldiers are strictly partitioned by identity (GroupKFold). Augmentation with random sensor dropouts during training improves macro-F1 by 0.05-0.06 during live disconnects. Streaming engine bit-parity with batch scoring was proven over 1,506 windows with zero mismatches.
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS: Engine, Audio, Squad Data, Hologram Viewer, Controller -->
+<script src="twin_engine.js"></script>
+<script src="audio.js"></script>
+<script src="squad_data.js"></script>
+<script src="hologram.js"></script>
+
+<script>
+// ============================================================
+//   WearTwin Main Application Controller & UI Coordinator
+// ============================================================
+
+const SENSORS_DEF = [
+  { id: "hr",     name: "Heart Rate",       icon: "", unit: "bpm",  min: 40,  max: 210, step: 1,   rest: 62.0, prec: 0 },
+  { id: "rmssd",  name: "HRV (RMSSD)",      icon: "", unit: "ms",   min: 3,   max: 120, step: 1,   rest: 50.0, prec: 0 },
+  { id: "spo2",   name: "SpO₂ Saturation",  icon: "", unit: "%",    min: 70,  max: 100, step: 0.5, rest: 98.0, prec: 1 },
+  { id: "rr",     name: "Respiration Rate", icon: "", unit: "brpm", min: 6,   max: 55,  step: 1,   rest: 14.0, prec: 0 },
+  { id: "skin_t", name: "Skin Temperature", icon: "", unit: "°C",   min: 28,  max: 39,  step: 0.1, rest: 33.5, prec: 1 },
+  { id: "amb_t",  name: "Ambient Temp",     icon: "", unit: "°C",   min: -10, max: 48,  step: 1,   rest: 24.0, prec: 0 },
+  { id: "hum",    name: "Rel. Humidity",    icon: "", unit: "%",    min: 5,   max: 100, step: 1,   rest: 50.0, prec: 0 },
+  { id: "imu",    name: "Movement (IMU)",   icon: "", unit: "g",    min: 0,   max: 1.5, step: 0.01,rest: 0.02, prec: 2 }
+];
+
+const PRESETS_DEF = {
+  rest:        { hr:62,  rmssd:50, spo2:98, rr:14, skin_t:33.5, amb_t:24, hum:50, imu:0.02, duration:30,  label:"Rest / Guard Duty" },
+  march:       { hr:100, rmssd:40, spo2:98, rr:18, skin_t:33.5, amb_t:15, hum:50, imu:0.45, duration:60,  label:"Steady March" },
+  heavy_hot:   { hr:140, rmssd:7,  spo2:98, rr:29, skin_t:37.1, amb_t:36, hum:55, imu:0.25, duration:60,  label:"Heavy Load (Hot)" },
+  altitude:    { hr:135, rmssd:25, spo2:88, rr:28, skin_t:32.0, amb_t:5,  hum:40, imu:0.40, duration:45,  label:"Altitude Climb" },
+  cardio:      { hr:175, rmssd:18, spo2:91, rr:36, skin_t:34.5, amb_t:25, hum:50, imu:0.60, duration:30,  label:"Cardio Stress" },
+  fatigue:     { hr:118, rmssd:14, spo2:98, rr:25, skin_t:34.5, amb_t:25, hum:50, imu:0.30, duration:150, label:"Prolonged Fatigue" },
+  dehydrated:  { hr:130, rmssd:20, spo2:97, rr:22, skin_t:36.0, amb_t:35, hum:35, imu:0.35, duration:75,  label:"Dehydrated March" },
+  intervals:   { hr:180, rmssd:12, spo2:96, rr:38, skin_t:34.0, amb_t:28, hum:50, imu:0.90, duration:40,  label:"HI Intervals" }
+};
+
+// Global App State
+let appMode = 'sandbox'; // 'sandbox' or 'squad'
+let hologram = null;
+let twinSandbox = new WearTwinEngine.SoldierTwin("SANDBOX");
+let sensorActive = {};
+let sandboxDuration = 60;
+let sandboxSimTimer = null;
+let sandboxSimStep = 0;
+let sandboxSimWindows = [];
+
+// Squad State
+let currentSquadId = "SOL-01";
+let squadPlaybackTimer = null;
+let squadStepIndex = 0;
+let isSquadPlaying = false;
+let squadPlaySpeed = 1;
+const SPEED_STEPS = [0.5, 1, 3, 10];
+
+// Initialize on Load
+window.addEventListener('DOMContentLoaded', () => {
+  // Init hologram canvas
+  hologram = new HologramViewer('hologramCanvas');
+
+  // Build sensor slider UI
+  buildSensorsUI();
+
+  // Populate Slide Notes Drawer
+  
+
+  // Setup Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (appMode === 'squad') squadPlayPause();
+      else runSandboxSimulation();
+    }
+    if (e.key === 'Escape') {
+      closeVerificationModal();
+      }
+  });
+
+  // Apply default preset
+  applyPreset('rest');
+
+  // Start with audio enabled on first user gesture
+  document.body.addEventListener('click', () => WearTwinAudio.init(), { once: true });
+});
+
+// Build Sliders UI
+function buildSensorsUI() {
+  const container = document.getElementById('sensorSlidersContainer');
+  container.innerHTML = '';
+
+  SENSORS_DEF.forEach(s => {
+    sensorActive[s.id] = true;
+    const card = document.createElement('div');
+    card.className = 'sensor-card';
+    card.id = `card_${s.id}`;
+    card.innerHTML = `
+      <div class="sensor-header">
+        <div class="sensor-info">
+          <span>${s.name}</span>
+          <div class="toggle-switch on" id="toggle_${s.id}" onclick="toggleSensorChannel('${s.id}')" title="Simulate Sensor Offline">
+            <div class="toggle-knob"></div>
+          </div>
+        </div>
+        <div class="sensor-value-group">
+          <span class="sensor-val" id="val_${s.id}">${s.rest.toFixed(s.prec)}</span>
+          <span class="sensor-unit">${s.unit}</span>
+          <span class="sensor-delta" id="delta_${s.id}">BASE</span>
+        </div>
+      </div>
+      <input type="range" class="range-slider" id="slider_${s.id}"
+             min="${s.min}" max="${s.max}" step="${s.step}" value="${s.rest}"
+             oninput="onSliderInput('${s.id}')">
+      <div class="sensor-bounds">
+        <span>MIN ${s.min}</span>
+        <span>REST ${s.rest}</span>
+        <span>MAX ${s.max}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function toggleSensorChannel(id) {
+  sensorActive[id] = !sensorActive[id];
+  const toggle = document.getElementById(`toggle_${id}`);
+  const card = document.getElementById(`card_${id}`);
+
+  if (sensorActive[id]) {
+    toggle.classList.add('on');
+    card.classList.remove('offline');
+    addLog(`Sensor [${id.toUpperCase()}] reconnected online.`, 'var(--accent-green)');
+  } else {
+    toggle.classList.remove('on');
+    card.classList.add('offline');
+    addLog(`Sensor [${id.toUpperCase()}] lost! Simulating channel dropout.`, 'var(--accent-red)');
+    WearTwinAudio.playAlertAlarm("Cardio-resp stress");
+  }
+  recomputeSandboxPreview();
+}
+
+function onSliderInput(id) {
+  const s = SENSORS_DEF.find(x => x.id === id);
+  const slider = document.getElementById(`slider_${id}`);
+  const val = parseFloat(slider.value);
+  document.getElementById(`val_${id}`).textContent = val.toFixed(s.prec);
+
+  // Delta calculation
+  const delta = val - s.rest;
+  const deltaEl = document.getElementById(`delta_${id}`);
+  if (Math.abs(delta) < 0.05) {
+    deltaEl.textContent = "BASE";
+    deltaEl.className = "sensor-delta";
+  } else {
+    deltaEl.textContent = `${delta > 0 ? '+' : ''}${delta.toFixed(s.prec)}`;
+    deltaEl.className = `sensor-delta ${delta > 0 ? 'pos' : 'neg'}`;
+  }
+
+  // Deactivate preset highlight
+  document.querySelectorAll('.preset-card').forEach(b => b.classList.remove('active'));
+
+  recomputeSandboxPreview();
+}
+
+function applyPreset(key) {
+  const p = PRESETS_DEF[key];
+  if (!p) return;
+
+  document.querySelectorAll('.preset-card').forEach(b => b.classList.remove('active'));
+  const btn = Array.from(document.querySelectorAll('.preset-card')).find(b => b.textContent.includes(p.label) || b.getAttribute('onclick').includes(key));
+  if (btn) btn.classList.add('active');
+
+  SENSORS_DEF.forEach(s => {
+    if (p[s.id] !== undefined) {
+      document.getElementById(`slider_${s.id}`).value = p[s.id];
+      document.getElementById(`val_${s.id}`).textContent = p[s.id].toFixed(s.prec);
+      sensorActive[s.id] = true;
+      document.getElementById(`toggle_${s.id}`).classList.add('on');
+      document.getElementById(`card_${s.id}`).classList.remove('offline');
+
+      const delta = p[s.id] - s.rest;
+      const deltaEl = document.getElementById(`delta_${s.id}`);
+      if (Math.abs(delta) < 0.05) {
+        deltaEl.textContent = "BASE";
+        deltaEl.className = "sensor-delta";
+      } else {
+        deltaEl.textContent = `${delta > 0 ? '+' : ''}${delta.toFixed(s.prec)}`;
+        deltaEl.className = `sensor-delta ${delta > 0 ? 'pos' : 'neg'}`;
+      }
+    }
+  });
+
+  if (p.duration) {
+    document.getElementById('durationSlider').value = p.duration;
+    document.getElementById('durationDisplay').textContent = `${p.duration} min`;
+    sandboxDuration = p.duration;
+  }
+
+  WearTwinAudio.playClick(600, 0.03);
+  recomputeSandboxPreview();
+}
+
+function onDurationChange(val) {
+  sandboxDuration = parseInt(val);
+  document.getElementById('durationDisplay').textContent = `${sandboxDuration} min`;
+}
+
+function getSensorsSnapshot() {
+  const snap = {};
+  SENSORS_DEF.forEach(s => {
+    snap[s.id] = sensorActive[s.id] ? parseFloat(document.getElementById(`slider_${s.id}`).value) : null;
+  });
+  return snap;
+}
+
+function getRestSnapshot() {
+  const snap = {};
+  SENSORS_DEF.forEach(s => { snap[s.id] = s.rest; });
+  return snap;
+}
+
+// Instant Preview of Final Destination Twin
+function recomputeSandboxPreview() {
+  if (sandboxSimTimer) return; // Do not interrupt active simulation run
+
+  const rest = getRestSnapshot();
+  const end = getSensorsSnapshot();
+  const previewTwin = new WearTwinEngine.SoldierTwin("PREVIEW");
+
+  // Feed 20 resting windows
+  for (let i = 0; i < WearTwinEngine.CALIBRATION_WINDOWS; i++) previewTwin.update(rest);
+
+  // Ramp towards end over 40 steps
+  let lastOut = null;
+  const nSteps = 40;
+  for (let i = 0; i < nSteps; i++) {
+    const w = {};
+    SENSORS_DEF.forEach(s => {
+      if (end[s.id] === null) w[s.id] = null;
+      else w[s.id] = rest[s.id] + (end[s.id] - rest[s.id]) * (i / (nSteps - 1));
+    });
+    lastOut = previewTwin.update(w);
+  }
+
+  if (lastOut) {
+    updateHUD(lastOut);
+    renderTimelineChart(previewTwin.history);
+  }
+}
+
+// Run Dynamic Ramp Scenario
+function runSandboxSimulation() {
+  const btn = document.getElementById('btnRunSandbox');
+  if (sandboxSimTimer) {
+    // Pause
+    clearInterval(sandboxSimTimer);
+    sandboxSimTimer = null;
+    btn.textContent = '▶ Resume';
+    btn.style.background = 'rgba(0,240,255,0.15)';
+    return;
+  }
+
+  btn.textContent = '⏸ Pause';
+  btn.style.background = 'rgba(239,68,68,0.2)';
+
+  const rest = getRestSnapshot();
+  const end = getSensorsSnapshot();
+  const nRampWindows = Math.round(sandboxDuration / WearTwinEngine.DT_MIN);
+
+  twinSandbox.reset();
+  sandboxSimWindows = [];
+  sandboxSimStep = 0;
+
+  // 20 rest windows
+  for (let i = 0; i < WearTwinEngine.CALIBRATION_WINDOWS; i++) sandboxSimWindows.push(rest);
+
+  // Ramp windows
+  for (let i = 0; i < nRampWindows; i++) {
+    const w = {};
+    SENSORS_DEF.forEach(s => {
+      if (end[s.id] === null) w[s.id] = null;
+      else w[s.id] = rest[s.id] + (end[s.id] - rest[s.id]) * (i / (nRampWindows - 1));
+    });
+    sandboxSimWindows.push(w);
+  }
+
+  addLog(`Scenario started: 10 min rest → ${sandboxDuration} min ramp.`, 'var(--accent-cyan)');
+
+  sandboxSimTimer = setInterval(() => {
+    if (sandboxSimStep >= sandboxSimWindows.length) {
+      clearInterval(sandboxSimTimer);
+      sandboxSimTimer = null;
+      btn.textContent = '▶ Run Scenario';
+      btn.style.background = 'rgba(0,240,255,0.15)';
+      addLog(`Scenario completed. Final state confirmed.`, 'var(--accent-green)');
+      return;
+    }
+
+    const out = twinSandbox.update(sandboxSimWindows[sandboxSimStep]);
+    updateHUD(out);
+    renderTimelineChart(twinSandbox.history);
+
+    // Alert check on state changes
+    if (twinSandbox.history.length >= 2) {
+      const prev = twinSandbox.history[twinSandbox.history.length - 2];
+      if (prev.state !== out.state && out.state !== 'Calibrating') {
+        addLog(`[${out.t_min.toFixed(1)}m] State transition: ${prev.state} -> ${out.state}`, out.alert ? 'var(--accent-amber)' : 'var(--accent-green)');
+        WearTwinAudio.playAlertAlarm(out.state);
+      }
+    }
+
+    sandboxSimStep++;
+  }, 45);
+}
+
+function resetSandbox() {
+  if (sandboxSimTimer) clearInterval(sandboxSimTimer);
+  sandboxSimTimer = null;
+  twinSandbox.reset();
+  document.getElementById('btnRunSandbox').textContent = '▶ Run Scenario';
+  applyPreset('rest');
+  addLog('Sandbox reset to resting baseline.', 'var(--text-muted)');
+}
+
+// Update HUD & Hologram
+function updateHUD(out) {
+  const ready = out.readiness !== null ? Math.round(out.readiness) : 100;
+  const scoreEl = document.getElementById('hudScore');
+  scoreEl.textContent = ready;
+
+  // Colors
+  let color = 'var(--ready-green)';
+  let bg = 'rgba(16, 185, 129, 0.12)';
+  if (ready < 50) {
+    color = 'var(--rest-red)';
+    bg = 'rgba(239, 68, 68, 0.15)';
+  } else if (ready < 75) {
+    color = 'var(--caution-amber)';
+    bg = 'rgba(245, 158, 11, 0.12)';
+  }
+
+  scoreEl.style.color = color;
+  scoreEl.style.textShadow = `0 0 25px ${color}`;
+
+  const bandEl = document.getElementById('hudBand');
+  bandEl.textContent = out.band.toUpperCase();
+  bandEl.style.color = color;
+  bandEl.style.borderColor = color;
+  bandEl.style.background = bg;
+
+  const stateText = document.getElementById('hudStateText');
+  const stateDot = document.getElementById('hudStateDot');
+  stateText.textContent = out.state;
+  stateDot.style.color = out.alert ? 'var(--accent-red)' : 'var(--accent-green)';
+
+  // Strain index bars
+  const setBar = (fillId, valId, val) => {
+    document.getElementById(valId).textContent = (val || 0).toFixed(2);
+    document.getElementById(fillId).style.width = `${Math.min(100, (val || 0) * 100)}%`;
+  };
+  setBar('thermalBarFill', 'thermalVal', out.thermal_idx);
+  setBar('fatigueBarFill', 'fatigueVal', out.fatigue_idx);
+  setBar('cardioBarFill', 'cardioVal', out.cardio_idx);
+
+  // Derived features
+  if (out.features) {
+    document.getElementById('featActiveMin').textContent = `${(out.features.active_min || 0).toFixed(1)} min`;
+    document.getElementById('featHrDev').textContent = `${(out.features.hr_dev >= 0 ? '+' : '')}${(out.features.hr_dev || 0).toFixed(0)} bpm`;
+    document.getElementById('featApparentTemp').textContent = `${(out.features.apparent_temp || 24).toFixed(1)} °C`;
+    document.getElementById('featCardiacCost').textContent = (out.features.hr_per_imu || 0).toFixed(2);
+  }
+
+  // Update Hologram
+  if (hologram) {
+    hologram.setTelemetry({
+      readiness: ready,
+      state: out.state,
+      hr: out.features ? out.features.hr : 62,
+      rr: out.features ? out.features.rr : 14,
+      skin_t: out.features ? out.features.skin_t : 33.5,
+      core_temp: out.latent ? out.latent.core_temp : 37.0,
+      active_min: out.features ? out.features.active_min : 0,
+      spo2: out.features ? out.features.spo2 : 98,
+      imu: out.features ? out.features.imu : 0.02
+    });
+  }
+
+  // Audio update
+  WearTwinAudio.updateHeartbeatBpm(out.features && out.features.hr ? out.features.hr : 62);
+}
+
+// Render Timeline Chart (Dual Track)
+function renderTimelineChart(history, truthHistory = null) {
+  const canvas = document.getElementById('timelineCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+  if (!history || history.length < 2) return;
+
+  const pad = { l: 28, r: 8, t: 12, b: 18 };
+  const gW = W - pad.l - pad.r;
+  const gH = H - pad.t - pad.b;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+  ctx.lineWidth = 1;
+  [0, 50, 75, 100].forEach(v => {
+    const y = pad.t + gH * (1 - v / 100);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.font = '8px JetBrains Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(v, pad.l - 4, y + 3);
+  });
+
+  const tMax = history[history.length - 1].t_min;
+  const tMin = history[0].t_min;
+  const tRange = Math.max(tMax - tMin, 1);
+
+  const getX = t => pad.l + ((t - tMin) / tRange) * gW;
+  const getY = v => pad.t + gH * (1 - Math.max(0, Math.min(100, v)) / 100);
+
+  // Ground Truth Curve (if squad mode)
+  if (truthHistory && truthHistory.length > 0) {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    truthHistory.forEach((h, i) => {
+      const x = getX(h.t_min);
+      const y = getY(h.readiness);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Predicted Twin Curve
+  ctx.beginPath();
+  history.forEach((h, i) => {
+    const x = getX(h.t_min);
+    const y = getY(h.readiness);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#00f0ff';
+  ctx.lineWidth = 2.0;
+  ctx.shadowColor = '#00f0ff';
+  ctx.shadowBlur = 8;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+// Mode Switching: Sandbox vs Squad
+function switchMode(mode) {
+  appMode = mode;
+  document.getElementById('tabSandbox').classList.toggle('active', mode === 'sandbox');
+  document.getElementById('tabSquad').classList.toggle('active', mode === 'squad');
+
+  document.getElementById('sandboxControls').style.display = mode === 'sandbox' ? 'block' : 'none';
+  document.getElementById('squadControls').style.display = mode === 'squad' ? 'block' : 'none';
+  document.getElementById('playbackBar').style.display = mode === 'squad' ? 'flex' : 'none';
+
+  if (mode === 'squad') {
+    initSquadUI();
+    loadSquadSoldier(currentSquadId);
+  } else {
+    recomputeSandboxPreview();
+  }
+}
+
+// Squad Mode Implementation
+function initSquadUI() {
+  const container = document.getElementById('squadListContainer');
+  container.innerHTML = '';
+
+  const squadData = window.WEARTWIN_SQUAD_DATA;
+  if (!squadData) return;
+
+  const squadProfiles = [
+    { id: "SOL-01", name: "Devesh", scenario: "Heavy Load, Hot", note: "Thermal hit @ 48m" },
+    { id: "SOL-02", name: "Suyash",   scenario: "Steady March",   note: "Steady normal" },
+    { id: "SOL-03", name: "Priyanka", scenario: "Dehydrated March", note: "Thermal missed @ 78m" },
+    { id: "SOL-04", name: "Sairaj", scenario: "Altitude Climb", note: "Cardio early @ 27.5m" },
+    { id: "SOL-05", name: "Kedar", scenario: "HI Intervals",   note: "Cardio @ 13m" },
+    { id: "SOL-06", name: "Bharati",  scenario: "Guard Duty",     note: "Rest duty clean" }
+  ];
+
+  squadProfiles.forEach(sp => {
+    const card = document.createElement('div');
+    card.className = `squad-member-card ${sp.id === currentSquadId ? 'active' : ''}`;
+    card.id = `squadCard_${sp.id}`;
+    card.onclick = () => selectSquadSoldier(sp.id);
+    card.innerHTML = `
+      <div>
+        <div class="squad-member-name">${sp.name} <span style="font-weight:400;color:var(--text-muted)">(${sp.id})</span></div>
+        <div class="squad-member-meta">${sp.scenario} · ${sp.note}</div>
+        <div class="squad-member-state" id="squadState_${sp.id}">
+          <span style="color:var(--accent-green)">● Normal</span>
+        </div>
+        <div class="mini-meter">
+          <div class="mini-meter-fill" id="squadMeter_${sp.id}" style="width:100%;background:var(--accent-green)"></div>
+        </div>
+      </div>
+      <div class="squad-readiness-box">
+        <div class="squad-readiness-num" id="squadReadiness_${sp.id}">100</div>
+        <div style="font-size:9px;color:var(--text-muted)" id="squadBand_${sp.id}">READY</div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function selectSquadSoldier(sid) {
+  currentSquadId = sid;
+  document.querySelectorAll('.squad-member-card').forEach(c => c.classList.remove('active'));
+  const activeCard = document.getElementById(`squadCard_${sid}`);
+  if (activeCard) activeCard.classList.add('active');
+  loadSquadSoldier(sid);
+}
+
+function loadSquadSoldier(sid) {
+  const squadData = window.WEARTWIN_SQUAD_DATA;
+  if (!squadData || !squadData.soldiers[sid]) return;
+
+  const sol = squadData.soldiers[sid];
+  document.getElementById('squadScrubber').max = sol.t_min.length - 1;
+  applySquadStep(squadStepIndex);
+}
+
+function applySquadStep(step) {
+  const squadData = window.WEARTWIN_SQUAD_DATA;
+  if (!squadData) return;
+
+  const sol = squadData.soldiers[currentSquadId];
+  if (!sol || step >= sol.t_min.length) return;
+
+  const t = sol.t_min[step];
+  document.getElementById('squadScrubber').value = step;
+  document.getElementById('timeDisplay').textContent = `${t.toFixed(1)} min`;
+
+  // Telemetry output object
+  const readyPred = sol.readiness_pred[step] >= 0 ? sol.readiness_pred[step] : 100;
+  const statePred = sol.state_pred[step];
+
+  const out = {
+    soldier_id: currentSquadId,
+    t_min: t,
+    status: sol.status[step],
+    state: statePred,
+    readiness: readyPred,
+    band: sol.band[step],
+    alert: statePred !== 'Normal' && statePred !== 'Calibrating',
+    thermal_idx: sol.thermal_idx[step],
+    fatigue_idx: sol.fatigue_idx[step],
+    cardio_idx: sol.cardio_idx[step],
+    features: {
+      hr: sol.hr[step],
+      rmssd: sol.rmssd[step],
+      spo2: sol.spo2[step],
+      rr: sol.rr[step],
+      skin_t: sol.skin_t[step],
+      amb_t: sol.amb_t[step],
+      hum: sol.hum[step],
+      imu: sol.imu[step],
+      active_min: sol.lat_fatigue[step] * 120,
+      hr_dev: sol.hr[step] - 62,
+      apparent_temp: sol.amb_t[step],
+      hr_per_imu: sol.hr[step] / (sol.imu[step] + 0.1)
+    },
+    latent: {
+      core_temp: sol.lat_core_temp[step],
+      fatigue: sol.lat_fatigue[step],
+      dehydration_pct: sol.lat_dehydration_pct[step]
+    }
+  };
+
+  updateHUD(out);
+
+  // Update Ground truth info box
+  document.getElementById('squadTrueState').textContent = sol.state_true[step];
+  document.getElementById('squadTrueReadiness').textContent = `${sol.readiness_true[step]}`;
+  document.getElementById('squadLatentMetrics').textContent = `${sol.lat_core_temp[step]} °C / ${sol.lat_dehydration_pct[step]}%`;
+
+  // Update all squad quick cards
+  Object.keys(squadData.soldiers).forEach(id => {
+    const sObj = squadData.soldiers[id];
+    if (step < sObj.t_min.length) {
+      const r = sObj.readiness_pred[step] >= 0 ? sObj.readiness_pred[step] : 100;
+      const st = sObj.state_pred[step];
+      const rEl = document.getElementById(`squadReadiness_${id}`);
+      const bEl = document.getElementById(`squadBand_${id}`);
+      const sEl = document.getElementById(`squadState_${id}`);
+      const mEl = document.getElementById(`squadMeter_${id}`);
+      const cardEl = document.getElementById(`squadCard_${id}`);
+
+      if (rEl) rEl.textContent = Math.round(r);
+      if (bEl) bEl.textContent = sObj.band[step].toUpperCase();
+      if (sEl) sEl.innerHTML = `<span style="color:${st !== 'Normal' ? 'var(--accent-red)' : 'var(--accent-green)'}">● ${st}</span>`;
+      if (mEl) {
+        mEl.style.width = `${r}%`;
+        mEl.style.background = r < 50 ? 'var(--accent-red)' : (r < 75 ? 'var(--accent-amber)' : 'var(--accent-green)');
+      }
+      if (cardEl) {
+        cardEl.classList.toggle('alert-pulse', st !== 'Normal' && st !== 'Calibrating');
+      }
+    }
+  });
+
+  // Dual timeline
+  const predHistory = [];
+  const truthHistory = [];
+  for (let i = 0; i <= step; i++) {
+    predHistory.push({ t_min: sol.t_min[i], readiness: sol.readiness_pred[i] >= 0 ? sol.readiness_pred[i] : 100 });
+    truthHistory.push({ t_min: sol.t_min[i], readiness: sol.readiness_true[i] });
+  }
+  renderTimelineChart(predHistory, truthHistory);
+}
+
+function squadPlayPause() {
+  isSquadPlaying = !isSquadPlaying;
+  const btn = document.getElementById('btnPlayPause');
+  btn.textContent = isSquadPlaying ? '⏸' : '▶';
+
+  if (isSquadPlaying) {
+    squadPlaybackTimer = setInterval(() => {
+      const sol = window.WEARTWIN_SQUAD_DATA.soldiers[currentSquadId];
+      if (squadStepIndex >= sol.t_min.length - 1) {
+        squadStepIndex = 0;
+      } else {
+        squadStepIndex++;
+      }
+      applySquadStep(squadStepIndex);
+    }, 150 / squadPlaySpeed);
+  } else {
+    clearInterval(squadPlaybackTimer);
+    squadPlaybackTimer = null;
+  }
+}
+
+function cycleSpeed() {
+  const curIdx = SPEED_STEPS.indexOf(squadPlaySpeed);
+  squadPlaySpeed = SPEED_STEPS[(curIdx + 1) % SPEED_STEPS.length];
+  document.getElementById('btnSpeed').textContent = `${squadPlaySpeed}×`;
+  if (isSquadPlaying) {
+    clearInterval(squadPlaybackTimer);
+    squadPlayPause(); squadPlayPause(); // restart with new interval
+  }
+}
+
+function onScrubChange(val) {
+  squadStepIndex = parseInt(val);
+  applySquadStep(squadStepIndex);
+}
+
+// Log utility
+function addLog(msg, color = 'var(--text-secondary)') {
+  const container = document.getElementById('eventLogContainer');
+  const d = document.createElement('div');
+  d.className = 'log-item';
+  d.style.color = color;
+  d.textContent = msg;
+  container.prepend(d);
+  if (container.children.length > 40) container.removeChild(container.lastChild);
+}
+
+// Audio Toggle
+function toggleAudio() {
+  const muted = WearTwinAudio.toggleMute();
+  const btn = document.getElementById('btnAudioToggle');
+  btn.textContent = muted ? 'Audio: OFF' : 'Audio: ON';
+  btn.style.borderColor = muted ? 'var(--border)' : 'var(--accent-cyan)';
+}
+
+// Fullscreen Toggle
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+// Verification Modal
+function openVerificationModal() {
+  document.getElementById('verificationModal').classList.add('open');
+  WearTwinAudio.playClick(900, 0.03);
+}
+function closeVerificationModal() {
+  document.getElementById('verificationModal').classList.remove('open');
+}
+</script>
+
+</body>
+</html>

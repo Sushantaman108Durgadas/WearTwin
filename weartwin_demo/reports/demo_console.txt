@@ -1,0 +1,73 @@
+Replaying 6 soldier(s), 205 windows (102 min). First 10 min = resting calibration.
+
+  [  12.0 min] SOL-05: Normal -> Cardio-resp stress  (readiness 68, Caution)
+  [  16.0 min] SOL-05: Cardio-resp stress -> Normal  (readiness 81, Ready)
+
+  t = 19.5 min      soldier  state                readiness  band         thermal fatigue cardio   truth
+                  SOL-04   Normal                    69    Caution       0.08   0.01   0.42   Normal
+                  SOL-05   Normal                    69    Caution       0.08   0.04   0.64   Cardio-resp stress
+                  SOL-01   Normal                    90    Ready         0.11   0.00   0.07   Normal
+                  SOL-02   Normal                    97    Ready         0.01   0.00   0.00   Normal
+                  SOL-03   Normal                    98    Ready         0.02   0.00   0.00   Normal
+                  SOL-06   Normal                   100    Ready         0.00   0.00   0.00   Normal
+
+  [  20.0 min] SOL-05: Normal -> Cardio-resp stress  (readiness 61, Caution)
+  [  24.0 min] SOL-05: Cardio-resp stress -> Normal  (readiness 79, Ready)
+  [  26.5 min] SOL-04: Normal -> Cardio-resp stress  (readiness 61, Caution)
+  [  29.5 min] SOL-04: Cardio-resp stress -> Normal  (readiness 62, Caution)
+  [  29.5 min] SOL-05: Normal -> Cardio-resp stress  (readiness 58, Caution)
+  [  32.0 min] SOL-05: Cardio-resp stress -> Normal  (readiness 72, Caution)
+  [  35.5 min] SOL-05: Normal -> Cardio-resp stress  (readiness 51, Caution)
+
+  t = 39.5 min      soldier  state                readiness  band         thermal fatigue cardio   truth
+                  SOL-05   Cardio-resp stress        47    Rest/rotate   0.24   0.37   0.03   Normal
+                  SOL-04   Normal                    54    Caution       0.34   0.30   0.51   Normal
+                  SOL-01   Normal                    59    Caution       0.49   0.27   0.21   Normal
+                  SOL-03   Normal                    84    Ready         0.18   0.02   0.00   Normal
+                  SOL-02   Normal                    93    Ready         0.06   0.02   0.00   Normal
+                  SOL-06   Normal                   100    Ready         0.00   0.00   0.00   Normal
+
+  [  40.0 min] SOL-05: Cardio-resp stress -> Normal  (readiness 54, Caution)
+  [  40.5 min] SOL-04: Normal -> Cardio-resp stress  (readiness 54, Caution)
+  [  43.5 min] SOL-05: Normal -> Cardio-resp stress  (readiness 32, Rest/rotate)
+  [  47.0 min] SOL-01: Normal -> Thermal strain  (readiness 55, Caution)
+  [  48.0 min] SOL-05: Cardio-resp stress -> Fatigue  (readiness 44, Rest/rotate)
+  [  53.0 min] SOL-01: Thermal strain -> Normal  (readiness 49, Rest/rotate)
+  [  57.0 min] SOL-01: Normal -> Fatigue  (readiness 48, Rest/rotate)
+
+  t = 59.5 min      soldier  state                readiness  band         thermal fatigue cardio   truth
+                  SOL-04   Cardio-resp stress        52    Caution       0.37   0.46   0.43   Fatigue
+                  SOL-01   Fatigue                   52    Caution       0.49   0.60   0.00   Normal
+                  SOL-05   Fatigue                   61    Caution       0.06   0.49   0.00   Fatigue
+                  SOL-03   Normal                    69    Caution       0.37   0.18   0.00   Normal
+                  SOL-02   Normal                    83    Ready         0.17   0.16   0.02   Normal
+                  SOL-06   Normal                   100    Ready         0.00   0.00   0.00   Normal
+
+  [  61.5 min] SOL-05: Fatigue -> Normal  (readiness 64, Caution)
+  [  63.5 min] SOL-04: Cardio-resp stress -> Normal  (readiness 59, Caution)
+  [  68.5 min] SOL-04: Normal -> Fatigue  (readiness 51, Caution)
+
+  t = 79.5 min      soldier  state                readiness  band         thermal fatigue cardio   truth
+                  SOL-03   Normal                    66    Caution       0.38   0.31   0.02   Thermal strain
+                  SOL-02   Normal                    72    Caution       0.20   0.31   0.00   Normal
+                  SOL-06   Normal                   100    Ready         0.00   0.00   0.00   Normal
+
+
+  t = 99.5 min      soldier  state                readiness  band         thermal fatigue cardio   truth
+                  SOL-02   Normal                    77    Ready         0.05   0.26   0.00   Normal
+
+
+  t = 102.0 min      soldier  state                readiness  band         thermal fatigue cardio   truth
+                  SOL-02   Normal                    74    Caution       0.01   0.30   0.00   Normal
+
+================================================================================================
+SUMMARY (alert = confirmed after 3 consecutive identical predictions)
+soldier  scenario         min readiness  first alert (twin)               first episode (ground truth)
+SOL-01   heavy_load_hot              45  Thermal strain @ 48.0 min        Thermal strain @ 46.0 min
+SOL-02   steady_march                66  none                             none
+SOL-03   hot_dehydration             60  none                             Thermal strain @ 78.0 min
+SOL-04   altitude_climb              46  Cardio-resp stress @ 27.5 min    Cardio-resp stress @ 41.0 min
+SOL-05   high_intensity              17  Cardio-resp stress @ 13.0 min    Cardio-resp stress @ 12.5 min
+SOL-06   rest_duty                   98  none                             none
+
+Per-window log saved to /home/claude/weartwin_demo/reports/demo_replay_log.csv
